@@ -26,6 +26,10 @@ repositories {
 		name = 'Maven Central'
 		url = 'https://repo.maven.apache.org/maven2'
 	}
+	maven {
+		name = 'shedaniel'
+		url = 'https://maven.shedaniel.me'
+	}
 
 	// For ModMenu and EMI
 	exclusiveContent {
@@ -155,10 +159,11 @@ dependencies {
 	implementation "com.terraformersmc:modmenu:${project.mod_menu_version}"
 
 	// REI
-	//compileOnly("me.shedaniel:RoughlyEnoughItems-api-fabric:${project.rei_version}") {
-	//exclude group: "net.fabricmc.fabric-api" //Stop this from importing an old version of FAPI that crashes everything
-	//}
-	//runtimeOnly "me.shedaniel:RoughlyEnoughItems-fabric:${project.rei_version}"
+	compileOnly(files("/home/rain/Downloads/RoughlyEnoughItems/RoughlyEnoughItems-fabric-26.1-4.jar"))
+	runtimeOnly(files("/home/rain/Downloads/RoughlyEnoughItems/RoughlyEnoughItems-fabric-26.1-4.jar"))
+	compileOnly(files("/home/rain/Downloads/RoughlyEnoughItems/cloth-config-26.1.154.jar"))
+	compileOnly "me.shedaniel.cloth:basic-math:0.6.1"
+	compileOnly(files("/home/rain/Downloads/RoughlyEnoughItems/architectury-19.0.1.9999-fabric.jar"))
 
 	// EMI
 	//compileOnly "dev.emi:emi-fabric:${project.emi_version}:api"
@@ -210,7 +215,7 @@ loom {
 sourceSets {
 	main {
 		java {
-			exclude("**/compatibility/rei/**")
+			//			exclude("**/compatibility/rei/**")
 			exclude("**/compatibility/emi/**")
 		}
 	}

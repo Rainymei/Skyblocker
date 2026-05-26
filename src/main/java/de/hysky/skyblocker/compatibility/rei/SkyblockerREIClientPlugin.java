@@ -7,6 +7,7 @@ import de.hysky.skyblocker.compatibility.rei.recipe.SkyblockRecipeCategory;
 import de.hysky.skyblocker.compatibility.rei.recipe.SkyblockRecipeDisplayGenerator;
 import de.hysky.skyblocker.config.SkyblockerConfigManager;
 import de.hysky.skyblocker.config.configs.GeneralConfig;
+import de.hysky.skyblocker.injected.SkyblockerStack;
 import de.hysky.skyblocker.mixins.accessors.AbstractContainerScreenAccessor;
 import de.hysky.skyblocker.skyblock.garden.visitor.VisitorHelper;
 import de.hysky.skyblocker.skyblock.itemlist.ItemRepository;
@@ -16,6 +17,7 @@ import de.hysky.skyblocker.skyblock.itemlist.recipes.SkyblockKatUpgradeRecipe;
 import de.hysky.skyblocker.skyblock.itemlist.recipes.SkyblockNpcShopRecipe;
 import de.hysky.skyblocker.skyblock.museum.MuseumManager;
 import de.hysky.skyblocker.utils.EnchantedBookUtils;
+import de.hysky.skyblocker.utils.FlexibleItemStack;
 import de.hysky.skyblocker.utils.ItemUtils;
 import de.hysky.skyblocker.utils.NEURepoManager;
 import de.hysky.skyblocker.utils.Utils;
@@ -58,10 +60,10 @@ public class SkyblockerREIClientPlugin implements REIClientPlugin {
 		categoryRegistry.addWorkstations(CategoryIdentifier.of(SkyblockNpcShopRecipe.ID), EntryStacks.of(Items.GOLD_NUGGET));
 		categoryRegistry.addWorkstations(CategoryIdentifier.of(SkyblockKatUpgradeRecipe.ID), EntryStacks.of(Items.BONE));
 
-		categoryRegistry.add(new SkyblockRecipeCategory(SkyblockCraftingRecipe.ID, Component.translatable("emi.category.skyblocker.skyblock_crafting"), ItemUtils.getSkyblockerStack(), 73));
-		categoryRegistry.add(new SkyblockRecipeCategory(SkyblockForgeRecipe.ID, Component.translatable("emi.category.skyblocker.skyblock_forge"), ItemUtils.getSkyblockerForgeStack(), 84));
+		categoryRegistry.add(new SkyblockRecipeCategory(SkyblockCraftingRecipe.ID, Component.translatable("emi.category.skyblocker.skyblock_crafting"), ItemUtils.getSkyblockerStack().getStackOrEmpty(), 73));
+		categoryRegistry.add(new SkyblockRecipeCategory(SkyblockForgeRecipe.ID, Component.translatable("emi.category.skyblocker.skyblock_forge"), ItemUtils.getSkyblockerForgeStack().getStackOrEmpty(), 84));
 		categoryRegistry.add(new SkyblockRecipeCategory(SkyblockNpcShopRecipe.ID, Component.translatable("emi.category.skyblocker.skyblock_npc_shop"), Items.GOLD_NUGGET.getDefaultInstance(), 73));
-		categoryRegistry.add(new SkyblockRecipeCategory(SkyblockKatUpgradeRecipe.ID, Component.translatable("emi.category.skyblocker.skyblock_kat_upgrade"), ItemUtils.getSkyblockerKatStack(), 64));
+		categoryRegistry.add(new SkyblockRecipeCategory(SkyblockKatUpgradeRecipe.ID, Component.translatable("emi.category.skyblocker.skyblock_kat_upgrade"), ItemUtils.getSkyblockerKatStack().getStackOrEmpty(), 64));
 		categoryRegistry.add(new SkyblockInfoCategory());
 	}
 
@@ -86,7 +88,7 @@ public class SkyblockerREIClientPlugin implements REIClientPlugin {
 		if (!Utils.isOnSkyblock()) return;
 		if (!SkyblockerConfigManager.get().general.itemList.enableItemList) return;
 		entryRegistry.removeEntryIf(entryStack -> true);
-		entryRegistry.addEntries(ItemRepository.getItemsStream().map(EntryStacks::of).toList());
+		entryRegistry.addEntries(ItemRepository.getItemsStream().map(s -> EntryStacks.of(s.getStackOrEmpty())).toList());
 	}
 
 	@SuppressWarnings("UnstableApiUsage")
@@ -98,29 +100,34 @@ public class SkyblockerREIClientPlugin implements REIClientPlugin {
 		if (!ItemRepository.filesImported() || NEURepoManager.isLoading()) return;
 
 		NEURepoManager.getConstants().getParents().getParents().forEach((parentId, childrenList) -> {
-			Optional<ItemStack> parentItem = ItemRepository.getItemsStream().filter(itemStack -> itemStack.getNeuName().equals(parentId)).findFirst();
+			Optional<? extends SkyblockerStack> parentItem = ItemRepository.getItemsStream()
+					.filter(itemStack -> itemStack.getNeuName().equals(parentId))
+					.findFirst();
 			if (parentItem.isEmpty()) return;
+			ItemStack parentStack = ((FlexibleItemStack) parentItem.get()).getStackOrEmpty();
+			if (parentStack.isEmpty()) return;
 
-			List<EntryStack<ItemStack>> allItems = Stream.concat(parentItem.stream(), ItemRepository.getItemsStream().filter(itemStack -> childrenList.contains(itemStack.getNeuName())))
-					.map(EntryStacks::of)
+			List<EntryStack<ItemStack>> allItems = Stream.concat(
+							parentItem.stream(),
+							ItemRepository.getItemsStream().filter(itemStack -> childrenList.contains(itemStack.getNeuName()))
+					)
+					.map(s -> EntryStacks.of(((FlexibleItemStack) s).getStackOrEmpty()))
+					.filter(e -> !e.isEmpty())
 					.toList();
 
 			String categoryPath = parentId.toLowerCase(Locale.ENGLISH).replace(";", "_");
-			// Drop the tier at the end of the id so the category identifier remains the same even if the parent is changed to a different tier
-			if (parentId.contains(";")) {
-				categoryPath = categoryPath.substring(0, categoryPath.lastIndexOf("_"));
-			}
 
-			// For Enchanted Books, change the name of the category to the enchant name
+			// Dead code block removed (computed enchantName but never used it)
+
 			Component name;
-			if (parentItem.get().is(Items.ENCHANTED_BOOK)) {
+			if (parentStack.is(Items.ENCHANTED_BOOK)) {
 				String enchantName = EnchantedBookUtils.getEnchantNameFromLore(parentItem.get().skyblocker$getLoreStrings());
-				// drop level
 				int levelSeparator = enchantName.lastIndexOf(' ');
 				enchantName = levelSeparator == -1 ? enchantName : enchantName.substring(0, levelSeparator);
-				name = Component.literal(enchantName).withStyle(parentId.startsWith("ULTIMATE") ? ChatFormatting.LIGHT_PURPLE : ChatFormatting.BLUE);
+				name = Component.literal(enchantName)
+						.withStyle(parentId.startsWith("ULTIMATE") ? ChatFormatting.LIGHT_PURPLE : ChatFormatting.BLUE);
 			} else {
-				name = parentItem.get().getHoverName();
+				name = parentStack.getHoverName();
 			}
 
 			registry.group(SkyblockerMod.id("rei_category/" + categoryPath), name, allItems);

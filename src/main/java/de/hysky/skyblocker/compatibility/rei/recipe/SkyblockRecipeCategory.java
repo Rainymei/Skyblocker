@@ -13,6 +13,7 @@ import net.minecraft.client.gui.navigation.ScreenPosition;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -70,21 +71,18 @@ public class SkyblockRecipeCategory implements DisplayCategory<SkyblockRecipeDis
 			out.add(Widgets.createSlot(new Point(inputSlot.x() + bounds.getX(), inputSlot.y() + bounds.getY()))
 					.markInput()
 					.backgroundEnabled(inputSlot.showBackground())
-					.entry(EntryStacks.of(inputSlot.stack())));
+					.entry(EntryStacks.of(inputSlot.stack().getStackOrEmpty())));
 		}
 		for (SkyblockRecipe.RecipeSlot outputSlot : recipe.getOutputSlots(bounds.getWidth(), bounds.getHeight())) {
 			out.add(Widgets.createSlot(new Point(outputSlot.x() + bounds.getX(), outputSlot.y() + bounds.getY()))
 					.markOutput()
 					.backgroundEnabled(outputSlot.showBackground())
-					.entry(EntryStacks.of(outputSlot.stack())));
+					.entry(EntryStacks.of(outputSlot.stack().getStackOrEmpty())));
 		}
-		out.add(Widgets.createDrawableWidget((context, mouseX, mouseY, delta) -> {
-			Matrix3x2fStack matrices = context.pose();
-			matrices.pushMatrix();
-			matrices.translate(bounds.getX(), bounds.getY());
-			recipe.render(context, bounds.getWidth(), bounds.getHeight(), mouseX - bounds.getX(), mouseY - bounds.getY());
-			matrices.popMatrix();
-		}));
+		out.add(Widgets.createDrawableWidget((context, mouseX, mouseY, delta) ->
+				recipe.extractRenderState((GuiGraphicsExtractor) context, bounds.getWidth(), bounds.getHeight(),
+						mouseX - bounds.getX(), mouseY - bounds.getY())
+		));
 		ScreenPosition arrowLocation = recipe.getArrowLocation(bounds.getWidth(), bounds.getHeight());
 		if (arrowLocation != null)
 			out.add(Widgets.createArrow(new Point(arrowLocation.x() + bounds.getX(), arrowLocation.y() + bounds.getY())));

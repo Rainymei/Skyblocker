@@ -27,12 +27,16 @@ public class SkyblockRecipeDisplay implements Display {
 
 	@Override
 	public List<EntryIngredient> getInputEntries() {
-		return recipe.getInputs().stream().map(EntryStacks::of).map(EntryIngredient::of).toList();
+		return recipe.getInputs().stream()
+				.map(s -> EntryIngredient.of(EntryStacks.of(s.getStackOrEmpty())))
+				.toList();
 	}
 
 	@Override
 	public List<EntryIngredient> getOutputEntries() {
-		return recipe.getOutputs().stream().map(EntryStacks::of).map(EntryIngredient::of).toList();
+		return recipe.getOutputs().stream()
+				.map(s -> EntryIngredient.of(EntryStacks.of(s.getStackOrEmpty())))
+				.toList();
 	}
 
 	public SkyblockRecipe getRecipe() {
